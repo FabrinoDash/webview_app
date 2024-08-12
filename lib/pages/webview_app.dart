@@ -13,6 +13,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _webViewController = WebViewController();
   double? loadingProgress;
+  String? currentPage;
+  bool backAction = false;
+  bool forwardAction = false;
   initializeWebView() {
     _webViewController
       ..loadRequest(
@@ -23,11 +26,39 @@ class _HomePageState extends State<HomePage> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (url) {
-            loadingProgress = 0.0;
-            setState(() {});
+            setState(() {
+              loadingProgress = 0.0;
+            });
           },
           onProgress: (progress) => setState(() {
             loadingProgress = progress.toDouble();
+          }),
+          onPageFinished: (url) => setState(() async {
+            setState(() {
+              currentPage = url;
+              loadingProgress = null;
+            });
+
+            if (await _webViewController.canGoBack()) {
+              setState(() {
+                backAction = true;
+              });
+            } else {
+              setState(() {
+                backAction = false;
+              });
+            }
+
+            // check forward
+            if (await _webViewController.canGoForward()) {
+              setState(() {
+                forwardAction = true;
+              });
+            } else {
+              setState(() {
+                forwardAction = false;
+              });
+            }
           }),
         ),
       );
@@ -43,7 +74,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xfff15625e),
+        elevation: 4,
+        backgroundColor: const Color.fromARGB(255, 9, 9, 9),
         flexibleSpace: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -60,10 +92,10 @@ class _HomePageState extends State<HomePage> {
                         }
                         return;
                       },
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back_rounded,
                         weight: 100,
-                        color: Colors.white,
+                        color: backAction ? Colors.white : Colors.transparent,
                       ),
                     ),
                     GestureDetector(
@@ -82,16 +114,24 @@ class _HomePageState extends State<HomePage> {
                         }
                         return;
                       },
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_forward_rounded,
-                        color: Colors.white,
+                        color:
+                            forwardAction ? Colors.white : Colors.transparent,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(
+                  height: 5,
+                ),
                 Text(
-                  _webViewController.currentUrl().toString(),
+                  currentPage != null ? currentPage.toString() : "",
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -105,7 +145,7 @@ class _HomePageState extends State<HomePage> {
             WebViewWidget(controller: _webViewController),
             loadingProgress != null
                 ? LinearProgressIndicator(
-                    color: const Color(0xfff15625e),
+                    color: Colors.white,
                     value: loadingProgress as double,
                   )
                 : const SizedBox(),
